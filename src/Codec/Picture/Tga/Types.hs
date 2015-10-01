@@ -8,13 +8,18 @@
 {-# LANGUAGE CPP #-}
 -- | Module implementing function to read and write
 -- Targa (*.tga) files.
-module Codec.Picture.Tga( decodeTga
-                        , decodeTgaWithMetadata
-                        , TgaFile_t
-                        , TgaSaveable
-                        , encodeTga
-                        , writeTga
-                        )  where
+module Codec.Picture.Tga.Types where
+--                        ( decodeTga
+--                        , decodeTgaWithMetadata
+--                        , TgaSaveable
+--                        , encodeTga
+--                        , writeTga
+--                        , TgaFile_t( .. )
+--                        , TgaHeader
+--                        , TgaFile
+--                        , TgaImage
+--                        ) where 
+                       
 
 #if !MIN_VERSION_base(4,8,0)
 import Data.Monoid( mempty )
@@ -172,15 +177,16 @@ instance Binary TgaHeader where
     put $ _tgaHdrImageDescription v
 
 
-data TgaFile = TgaFile
+data TgaFile_t = TgaFile
   { _tgaFileHeader :: !TgaHeader
   , _tgaFileId     :: !B.ByteString
   , _tgaPalette    :: !B.ByteString
   , _tgaFileRest   :: !B.ByteString
   }
 
-type TgaFile_t = TgaFile
-
+--type TgaImage = TgaFile_t
+--f :: TgaImage -> Int
+--f _ = 1
 
 getPalette :: TgaHeader -> Get B.ByteString
 getPalette hdr | _tgaHdrMapLength hdr <= 0 = return mempty
@@ -189,7 +195,7 @@ getPalette hdr = getByteString $ bytePerPixel * pixelCount
     bytePerPixel = fromIntegral $ _tgaHdrMapDepth hdr `div` 8
     pixelCount = fromIntegral $ _tgaHdrMapLength hdr
 
-instance Binary TgaFile where
+instance Binary TgaFile_t where
   get = do
     hdr <- get
     validateTga hdr
@@ -256,8 +262,8 @@ instance TGAPixel Depth32 where
        r = U.unsafeIndex str (ix + 2)
        a = 255 - U.unsafeIndex str (ix + 3)
 
-prepareUnpacker :: TgaFile
-                -> (forall tgapx. (TGAPixel tgapx) => tgapx -> TgaFile -> Image (Unpacked tgapx))
+prepareUnpacker :: TgaFile_t
+                -> (forall tgapx. (TGAPixel tgapx) => tgapx -> TgaFile_t -> Image (Unpacked tgapx))
                 -> Either String DynamicImage
 prepareUnpacker file f =
   let hdr = _tgaFileHeader file
@@ -280,13 +286,13 @@ applyPalette f palette (ImageY8 img) =
 applyPalette _ _ _ =
   fail "Bad colorspace for image"
 
-unparse :: TgaFile -> Either String (DynamicImage, Metadatas)
+unparse :: TgaFile_t -> Either String (DynamicImage, Metadatas)
 unparse file =
   let hdr = _tgaFileHeader file
       imageType = _tgaHdrImageType hdr
 
       unpacker :: forall tgapx. (TGAPixel tgapx)
-               => tgapx -> TgaFile -> Image (Unpacked tgapx)
+               => tgapx -> TgaFile_t -> Image (Unpacked tgapx)
       unpacker | isRleEncoded imageType = unpackRLETga
                | otherwise = unpackUncompressedTga
 
@@ -354,7 +360,7 @@ copyData tgapx imgData readData maxi maxRead = go
 unpackUncompressedTga :: forall tgapx
                        . (TGAPixel tgapx)
                       => tgapx -- ^ Type witness
-                      -> TgaFile
+                      -> TgaFile_t
                       -> Image (Unpacked tgapx)
 unpackUncompressedTga tga file = runST $ do
     img <- MutableImage width height <$> M.new maxi
@@ -380,7 +386,7 @@ runLength v = fromIntegral (v .&. 0x7F) + 1
 unpackRLETga :: forall tgapx
               . (TGAPixel tgapx)
              => tgapx -- ^ Type witness
-             -> TgaFile
+             -> TgaFile_t
              -> Image (Unpacked tgapx)
 unpackRLETga tga file = runST $ do
     img <- MutableImage width height <$> M.new maxi

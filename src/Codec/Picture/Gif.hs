@@ -3,6 +3,9 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE CPP #-}
 -- | Module implementing GIF decoding.
+module Codec.Picture.Gif where
+
+{-
 module Codec.Picture.Gif ( -- * Reading
                            decodeGif
                          , decodeGifWithMetadata
@@ -20,7 +23,11 @@ module Codec.Picture.Gif ( -- * Reading
                          , writeGifImageWithPalette
                          , writeGifImages
                          , greyPalette
+                           -- * Internal
+                         , GifImage
+                         , GifFile
                          ) where
+-}
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative( pure, (<*>), (<$>) )
@@ -743,14 +750,18 @@ computeMinimumLzwKeySize Image { imageWidth = itemCount } = go 2
 --
 -- * Every palette must have between one and 256 colors.
 --
+
+
+    --  | False = Left "False"
+    -- | not $ checkGifImageSizes imageList = Left "Gif images have different size"
+    -- | not $ checkPaletteValidity imageList =
+    --   Left $ "Invalid palette size " ++ concat [show (imageWidth pal) ++ " "| (pal, _, _) <- imageList ]
+    -- | any areIndexAbsentFromPalette imageList = Left "Image contains indexes absent from the palette"
+
 encodeGifImages :: GifLooping -> [(Palette, GifDelay, Image Pixel8)]
                 -> Either String L.ByteString
-encodeGifImages _ [] = Left "No image in list"
-encodeGifImages _ imageList
-    | not $ checkGifImageSizes imageList = Left "Gif images have different size"
-    | not $ checkPaletteValidity imageList =
-        Left $ "Invalid palette size " ++ concat [show (imageWidth pal) ++ " "| (pal, _, _) <- imageList ]
-    | any areIndexAbsentFromPalette imageList = Left "Image contains indexes absent from the palette"
+-- encodeGifImages _ [] = Left "No image in list"
+-- encodeGifImages _ imageList
 encodeGifImages looping imageList@((firstPalette, _,firstImage):_) = Right $ encode allFile
   where
     allFile = GifFile

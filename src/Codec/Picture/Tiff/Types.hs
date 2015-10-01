@@ -238,9 +238,7 @@ instance BinaryParam (Endianness, Int, ImageFileDirectory) ExifData where
                                  , ifdType = TypeLong
                                  , ifdCount = 1 } = do
          align ifd $ do
-            let byOffset = sortBy (compare `on` ifdOffset)
-                cleansIfds = fmap (cleanImageFileDirectory endianness)
-            subIfds <- cleansIfds . byOffset <$> getP endianness
+            subIfds <- fmap (cleanImageFileDirectory endianness) <$> getP endianness
             cleaned <- fetchExtended endianness maxi $ sortBy (compare `on` ifdOffset) subIfds
             pure $ ExifIFD [(ifdIdentifier fd, ifdExtended fd) | fd <- cleaned]
          {-  
@@ -341,10 +339,8 @@ instance BinaryParam B.ByteString (TiffHeader, [ImageFileDirectory]) where
     readed <- bytesRead
     skip . fromIntegral $ fromIntegral (hdrOffset hdr) - readed
     let endian = hdrEndianness hdr
-        byOffset = sortBy (compare `on` ifdOffset)
-        cleanIfds = fmap (cleanImageFileDirectory endian)
 
-    ifd <- cleanIfds . byOffset <$> getP endian
+    ifd <- fmap (cleanImageFileDirectory endian) <$> getP endian
     cleaned <- fetchExtended endian (B.length raw) ifd
     return (hdr, cleaned)
 
